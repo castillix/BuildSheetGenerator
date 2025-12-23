@@ -1,0 +1,38 @@
+# Pricing Configuration
+# Format: KEY=VALUE
+# Lines starting with # are comments
+
+# Base Fee
+BASE_FEE=40.0
+
+# RAM Price per GB multiplier by type
+RAM_DDR3_MULT=1.5
+RAM_DDR4_MULT=200.5
+RAM_DDR5_MULT=6.0
+RAM_DEFAULT_MULT=2.5
+
+# Drive Price per GB
+DRIVE_HDD_PER_GB=0.02
+DRIVE_SSD_PER_GB=0.08
+DRIVE_NVME_PER_GB=0.1
+DRIVE_DEFAULT_PER_GB=0.08
+
+# OS Price Modifiers (Multiplier of total components price)
+# e.g. 1.0 = no change, 0.85 = 15% discount, 1.2 = 20% markup
+OS_LINUX_MULT=0.85
+OS_MACOS_MULT=1.2
+OS_WINDOWS_MULT=1.0
+
+# CPU Pricing Factors
+# Formula: YearPrice = (Year - YEAR_BASE) * (IS_LAPTOP ? YEAR_LAPTOP_MULT : YEAR_DESKTOP_MULT)
+CPU_YEAR_BASE=2012
+CPU_YEAR_LAPTOP_MULT=6
+CPU_YEAR_DESKTOP_MULT=10
+
+# Formula: CorePrice = Cores * (YearPrice * CPU_CORE_MULT)
+CPU_CORE_MULT=0.025
+
+# Formula: ThreadPrice = (Threads - Cores) * CPU_THREAD_EXCESS_PRICE
+CPU_THREAD_EXCESS_PRICE=0.75
+
+BASE_FEE=999.0

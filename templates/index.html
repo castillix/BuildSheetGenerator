@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build Sheet Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🖥️ FreeGeek Build Sheet Generator</h1>
+            <p class="subtitle">Automated hardware detection and pricing system</p>
+        </header>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Scanning hardware...</p>
+        </div>
+
+        <div class="content" id="content" style="display: none;">
+            <!-- System Specifications Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>System Specifications</h2>
+                    <button class="btn-secondary" onclick="rescanHardware()">🔄 Rescan Hardware</button>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>CPU Selection Mode</label>
+                            <div class="radio-group" style="display: flex; gap: 15px; margin-bottom: 10px;">
+                                <label><input type="radio" name="cpu_mode" value="auto" checked
+                                        onchange="toggleCpuMode()"> Auto-Detect</label>
+                                <label><input type="radio" name="cpu_mode" value="custom" onchange="toggleCpuMode()">
+                                    Manual Entry</label>
+                            </div>
+
+                            <div id="cpu_auto_section">
+                                <small class="text-muted" id="raw_cpu_name_display"
+                                    style="display: block; margin-top: 5px; font-size: 0.8em; color: #666;">
+                                    Detected: <span id="detected_cpu_name">...</span>
+                                </small>
+                            </div>
+
+                            <div id="cpu_custom_section" style="display: none;">
+                                <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                    <label style="font-weight: 600; color: #2ecc71;">Search Database & Auto-Fill</label>
+                                    <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                                        <input type="text" id="cpu_search_input" placeholder="Search CPU in DB..."
+                                            onkeydown="if(event.key === 'Enter') searchCpu()">
+                                        <button class="btn-secondary" onclick="searchCpu()" type="button"
+                                            style="padding: 5px 10px;">🔍</button>
+                                    </div>
+                                    <select id="cpu_model_select" onchange="onCpuSelectChange()">
+                                        <option value="" disabled selected>Loading...</option>
+                                    </select>
+                                    <div style="margin-top: 10px;">
+                                        <label for="manual_passmark_input" style="font-size: 0.9em;">Manual Passmark
+                                            Score (Optional)</label>
+                                        <input type="number" id="manual_passmark_input" placeholder="Override Score"
+                                            onchange="recalculatePrice()" style="width: 100%;">
+                                        <small class="text-muted">Overriding this updates the price calculation.</small>
+                                    </div>
+                                </div>
+
+                                <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                                    <div class="form-group" style="grid-column: 1 / -1;">
+                                        <label for="custom_cpu_name">CPU Name</label>
+                                        <input type="text" id="custom_cpu_name" placeholder="e.g. Intel Core i7-8700K">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="custom_cpu_cores">Cores</label>
+                                        <input type="number" id="custom_cpu_cores" placeholder="e.g. 6">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="custom_cpu_threads">Threads</label>
+                                        <input type="number" id="custom_cpu_threads" placeholder="e.g. 12">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="custom_cpu_speed">Max Turbo (GHz)</label>
+                                        <input type="text" id="custom_cpu_speed" placeholder="e.g. 4.7">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="cpu_cores">Cores / Threads (Auto)</label>
+                            <input type="text" id="cpu_cores" readonly disabled>
+                        </div>
+                        <div class="form-group">
+                            <label for="ram_gb">RAM (GB)</label>
+                            <input type="number" id="ram_gb" step="0.01" onchange="updatePricing()">
+                        </div>
+                        <div class="form-group">
+                            <label for="ram_type">RAM Type</label>
+                            <select id="ram_type" onchange="updatePricing()">
+                                <option value="DDR3">DDR3</option>
+                                <option value="DDR4">DDR4</option>
+                                <option value="DDR5">DDR5</option>
+                            </select>
+                        </div>
+                        <!-- GPU Section -->
+                        <div class="form-group" id="gpu_selection_section">
+                            <label for="gpu_model_select">Detected GPU(s)</label>
+                            <select id="gpu_model_select" onchange="onGpuSelectChange()">
+                                <option value="" disabled selected>Scanning...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="gpu_name">GPU Name (Build Sheet)</label>
+                            <input type="text" id="gpu_name" placeholder="e.g., NVIDIA GTX 1060">
+                        </div>
+                        <div class="form-group"
+                            style="display: flex; align-items: center; gap: 10px; padding-top: 25px;">
+                            <input type="checkbox" id="include_gpu" checked onchange="updatePricing()">
+                            <label for="include_gpu" style="margin-bottom: 0;">Include GPU in Build Sheet</label>
+                        </div>
+                        <div class="form-group" id="gpu_price_section">
+                            <label for="gpu_price">GPU Price ($)</label>
+                            <input type="number" id="gpu_price" step="0.01" value="0" onchange="updatePricing()">
+                        </div>
+                        <div class="form-group">
+                            <label for="os_name">Operating System</label>
+                            <input type="text" id="os_name">
+                        </div>
+                        <div class="form-group">
+                            <label for="device_type">Device Type</label>
+                            <input type="text" id="device_type" readonly>
+                        </div>
+                        <!-- Laptop-specific fields -->
+                        <div class="form-group laptop-only" style="display: none;">
+                            <label for="screen_size">Screen Size</label>
+                            <input type="text" id="screen_size" placeholder="e.g., 15.6 inches">
+                        </div>
+                        <div class="form-group laptop-only" style="display: none;">
+                            <label for="battery_health">Battery Health</label>
+                            <input type="text" id="battery_health" placeholder="e.g., 100% or Excellent">
+                        </div>
+                        <div class="form-group laptop-only" style="display: none;">
+                            <label for="battery_duration">Battery Duration (hours)</label>
+                            <input type="number" id="battery_duration" step="0.5" placeholder="e.g., 4.5">
+                        </div>
+                    </div>
+
+                    <div class="storage-section">
+                        <h3>Storage Devices</h3>
+                        <div id="storage_list"></div>
+                    </div>
+
+                    <!-- Software Selection -->
+                    <div class="software-section"
+                        style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                        <h3>Software Included</h3>
+                        <div id="software_list_container"
+                            style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                            <!-- Software items will be populated here -->
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="new_software_input" placeholder="Add custom software..."
+                                style="flex-grow: 1; padding: 5px;">
+                            <button class="btn-secondary" onclick="addSoftwareItem()"
+                                style="padding: 5px 10px;">Add</button>
+                        </div>
+                    </div>
+
+                    <!-- Feature Checkboxes -->
+                    <div class="features-section">
+                        <h3>Features & Connectivity</h3>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="feature_wifi">
+                                <span>WiFi</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="feature_bluetooth">
+                                <span>Bluetooth</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="feature_sound">
+                                <span>Sound</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="feature_microphone">
+                                <span>Microphone</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="feature_touchscreen">
+                                <span>Touchscreen</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="feature_webcam">
+                                <span>Webcam</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Fields Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Custom Information</h2>
+                </div>
+                <div class="card-body">
+                    <!-- Computer Model - Full width, prominent -->
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="computer_model" style="font-size: 1.1rem; color: #667eea;">
+                            🖥️ Computer Model / Name <span style="color: #e74c3c;">*</span>
+                        </label>
+                        <input type="text" id="computer_model"
+                            placeholder="e.g., Dell OptiPlex 7040, HP EliteBook 840 G5"
+                            style="font-size: 1.1rem; font-weight: 500; border: 2px solid #667eea;">
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="serial_number">Serial Number / ID</label>
+                            <input type="text" id="serial_number" placeholder="Auto-detected or enter manually">
+                        </div>
+                        <div class="form-group">
+                            <label for="builder_name">Builder Name</label>
+                            <input type="text" id="builder_name" placeholder="Enter your name">
+                        </div>
+                        <div class="form-group">
+                            <label for="discount_percent">Discount (%)</label>
+                            <input type="number" id="discount_percent" step="0.01" value="0" min="0" max="100"
+                                onchange="updatePricing()">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">Additional Notes</label>
+                        <textarea id="notes" rows="4"
+                            placeholder="Enter any additional information about this build..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Price Breakdown Card -->
+            <div class="card price-card">
+                <div class="card-header">
+                    <h2>Price Breakdown</h2>
+                </div>
+                <div class="card-body">
+                    <div class="price-breakdown" id="price_breakdown">
+                        <div class="price-row">
+                            <span>Base Fee</span>
+                            <span class="price-value">$40.00</span>
+                        </div>
+                        <div class="price-row editable-price">
+                            <span>CPU Price</span>
+                            <input type="number" id="cpu_price_override" step="0.01" placeholder="Auto"
+                                onchange="updatePricing()">
+                            <span class="price-value" id="cpu_price_display">$0.00</span>
+                        </div>
+                        <div class="price-row editable-price">
+                            <span>RAM Price</span>
+                            <input type="number" id="ram_price_override" step="0.01" placeholder="Auto"
+                                onchange="updatePricing()">
+                            <span class="price-value" id="ram_price_display">$0.00</span>
+                        </div>
+                        <div class="price-row editable-price">
+                            <span>Storage Price</span>
+                            <input type="number" id="storage_price_override" step="0.01" placeholder="Auto"
+                                onchange="updatePricing()">
+                            <span class="price-value" id="storage_price_display">$0.00</span>
+                        </div>
+                        <div class="price-row editable-price" id="gpu_price_row" style="display: none;">
+                            <span>GPU Price</span>
+                            <input type="number" id="gpu_price" step="0.01" value="0" onchange="updatePricing()">
+                            <span class="price-value" id="gpu_price_display">$0.00</span>
+                        </div>
+                        <div class="price-row">
+                            <span>OS Modifier</span>
+                            <span class="price-value" id="os_modifier_display">$0.00</span>
+                        </div>
+                        <div class="price-row discount-row" id="discount_row" style="display: none;">
+                            <span>Discount</span>
+                            <span class="price-value" id="discount_display">-$0.00</span>
+                        </div>
+                        <div class="price-row total-row">
+                            <span>Total Estimated Price</span>
+                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                                <input type="number" id="total_price_override" step="0.01" placeholder="Override Total"
+                                    style="width: 120px; text-align: right; font-weight: bold; border: 2px solid #2ecc71; border-radius: 5px; padding: 5px;"
+                                    title="Enter a value here to force the final PDF price">
+                                <span class="price-value" id="total_price_display">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="price-note">💡 Leave price fields empty to use auto-calculated values, or enter custom
+                        amounts to override.</p>
+                </div>
+            </div>
+
+            <!-- Generate PDF Button -->
+            <div class="action-section">
+                <button class="btn-primary btn-large" onclick="generatePDF()">
+                    📄 Generate PDF Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script>
+        // Auto-scan on page load
+        window.addEventListener('load', () => {
+            scanHardware();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,5 @@
+psutil
+reportlab
+py-cpuinfo
+wmi; sys_platform == 'win32'
+flask
