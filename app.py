@@ -4,7 +4,7 @@ import pricing
 import report
 import os
 import json
-
+import socket
 import sys
 
 if getattr(sys, 'frozen', False):
@@ -182,12 +182,36 @@ def generate_pdf():
             'error': str(e)
         }), 500
 
+def find_available_port(start_port=8888, max_attempts=100):
+    """Find the first available port starting from start_port"""
+    for port in range(start_port, start_port + max_attempts):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('0.0.0.0', port))
+                return port
+            except OSError:
+                continue
+    raise RuntimeError(f"Could not find an available port in range {start_port}-{start_port + max_attempts}")
+
 if __name__ == '__main__':
     # Create necessary directories (only in dev mode)
     if not getattr(sys, 'frozen', False):
         os.makedirs('templates', exist_ok=True)
         os.makedirs('static', exist_ok=True)
     
-    print("Starting Build Sheet Generator Web Interface...")
-    print("Open your browser and navigate to: http://localhost:15001")
-    app.run(debug=True, port=15001)
+    try:
+        # Check if we are running in the reloader subprocess
+        if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            # We are in the reloader subprocess, use the port passed from parent
+            port = int(os.environ.get('BUILD_SHEET_PORT', 8888))
+            print(f" * Restarting with reloader, port: {port}")
+        else:
+            # We are in the main process
+            port = find_available_port()
+            os.environ['BUILD_SHEET_PORT'] = str(port)
+            print("Starting Build Sheet Generator Web Interface...")
+            print(f"Open your browser and navigate to: http://localhost:{port}")
+
+        app.run(debug=True, port=port)
+    except Exception as e:
+        print(f"Error starting server: {e}")
